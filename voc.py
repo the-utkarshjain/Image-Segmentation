@@ -52,13 +52,13 @@ def get_train_val_test_loader(input_transform, target_transform, TF_transform= N
         device='cpu', bz=16, collate_fn=None):
 
     train_dataset =VOC('train', transform=input_transform, target_transform=target_transform, TF_transform=TF_transform, device = device)
-    val_dataset = VOC('val', transform=input_transform, target_transform=target_transform, TF_transform=None, device = device)
-    test_dataset = VOC('test', transform=input_transform, target_transform=target_transform, TF_transform=None, device = device)
+    val_dataset = VOC('val', transform=input_transform, target_transform=target_transform, TF_transform = None, device = device)
+    test_dataset = VOC('test', transform=input_transform, target_transform=target_transform, TF_transform = None, device = device)
 
     if TF_transform is not None:
         train_loader = DataLoader(dataset=train_dataset, batch_size= bz, shuffle=True, collate_fn=collate_fn)
-        val_loader = DataLoader(dataset=val_dataset, batch_size= bz, shuffle=False, collate_fn=None)
-        test_loader = DataLoader(dataset=test_dataset, batch_size= bz, shuffle=False, collate_fn=None)
+        val_loader = DataLoader(dataset=val_dataset, batch_size= bz, shuffle=False, collate_fn= None)
+        test_loader = DataLoader(dataset=test_dataset, batch_size= bz, shuffle=False, collate_fn= None)
     else:
         train_loader = DataLoader(dataset=train_dataset, batch_size= bz, shuffle=True, collate_fn=None)
         val_loader = DataLoader(dataset=val_dataset, batch_size= bz, shuffle=False, collate_fn=None)

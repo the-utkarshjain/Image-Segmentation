@@ -13,14 +13,13 @@ from model import *
 
 device =  torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-
 def init_weights(m):
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
         torch.nn.init.xavier_uniform_(m.weight.data)
         torch.nn.init.normal_(m.bias.data) #xavier not applicable for biases
 
-    
-def train(model, train_loader, val_loader, criterion, optimizer, scheduler, config):
+
+def train(model, train_loader, val_loader, criterion, scheduler, optimizer, config):
     epochs, early_stop, remark = config['epochs'], config['early_stop'], config['remark']
     print(f'Training model [{remark}] on device [{device}]')
 
@@ -33,7 +32,7 @@ def train(model, train_loader, val_loader, criterion, optimizer, scheduler, conf
     validation_loss_history = []
     early_stop_epoch = 0
     
-    for epoch in range(epochs):
+    for epoch in (pbar := tqdm(range(epochs))):
         model.train()
         training_loss_per_epoch = 0
         
@@ -41,11 +40,13 @@ def train(model, train_loader, val_loader, criterion, optimizer, scheduler, conf
             outputs =  model(inputs)
             loss = criterion(outputs, labels)
             training_loss_per_epoch += loss.item()
+
+            # pbar.set_postfix_str(f'Train loss: {round(loss.item(), 2)}')
             
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-        
+            
         if scheduler != None:
             scheduler.step()
             
@@ -55,10 +56,10 @@ def train(model, train_loader, val_loader, criterion, optimizer, scheduler, conf
         validation_loss, validation_iou_score, validation_accuracy = val(model, val_loader, criterion)
 
         # Printing and storing information
-        print(f"Epoch {epoch+1}")
-        print(
-            f"Train Loss: {round(training_loss_per_epoch, 5)} Val Loss: {round(validation_loss, 5)} | " +
-            f"Val IoU: {round(validation_iou_score, 5)}. Val acc: {round(validation_accuracy, 5)}")
+        pbar.set_description_str(f"Epoch {epoch+1}")
+        pbar.set_postfix_str(
+            f"Train Loss: {round(training_loss_per_epoch, 2)} Val Loss: {round(validation_loss, 2)} | " +
+            f"Val IoU: {round(validation_iou_score, 2)}. Val acc: {round(validation_accuracy, 2)}")
         
         training_loss_history.append(training_loss_per_epoch)
         validation_loss_history.append(validation_loss)
@@ -70,12 +71,12 @@ def train(model, train_loader, val_loader, criterion, optimizer, scheduler, conf
             best_accuracy = validation_accuracy
             patience = early_stop
             early_stop_epoch = epoch
-            save_model(model, str(epoch+1))
+            save_model(model, remark + str(epoch+1))
         else:
             patience -= 1
             if (patience == 0):
                 print(f"\nEarly stop at epoch {early_stop_epoch}.\n")
-   
+    
     return best_iou_score, best_accuracy, min_validation_loss, training_loss_history, validation_loss_history, early_stop_epoch
 
 
@@ -99,8 +100,8 @@ def val(model, val_loader, criterion):
     return torch.mean(torch.tensor(losses)).item(), torch.mean(torch.tensor(mean_iou_scores)).item(), torch.mean(torch.tensor(accuracy)).item()
 
 
-def modelTest(model, test_loader, criterion, epoch):
-    model = load_model(model, "./trained_model/" + str(epoch+1) + ".pt")
+def modelTest(model, test_loader, criterion, epoch, remark):
+    model = load_model(model, "./trained_model/" + remark + str(epoch+1) + ".pt")
     model.eval()
 
     losses = []
@@ -120,6 +121,7 @@ def modelTest(model, test_loader, criterion, epoch):
     return torch.mean(torch.tensor(losses)).item(), torch.mean(torch.tensor(mean_iou_scores)).item(), torch.mean(torch.tensor(accuracy)).item()
 
 
+
 if __name__ == "__main__":
     
     # Transformations
@@ -128,7 +130,7 @@ if __name__ == "__main__":
             standard_transforms.ToTensor(),
             standard_transforms.Normalize(*mean_std)
         ])
-    target_transform = MaskToTensor()
+    target_transform = voc.MaskToTensor()
 
     # Dataset and Dataloader initialization
     train_dataset =voc.VOC('train', transform=input_transform, target_transform=target_transform, device = device)
@@ -140,7 +142,7 @@ if __name__ == "__main__":
     test_loader = DataLoader(dataset=test_dataset, batch_size= 16, shuffle=False)
 
     # Training variables
-    epochs =20
+    epochs = 20
     n_class = 21
 
     fcn_model = FCN_baseline(n_class=n_class)

@@ -102,20 +102,32 @@ def plot_stats(stats, path=None):
     if path:
         plt.savefig(path)
 
-def plot_loss_acc(loss_trn, loss_val, path):
-    fig = plt.figure(figsize=(10, 4))
-    plt.plot(loss_trn, label = "Training Loss")
-    plt.plot(loss_val, label = "Validation Loss")
+def plot_loss_acc(loss_trn, acc_trn, loss_val, acc_val, label_axes=False, path=None):
+    fig, ax = plt.subplots(1,2, figsize=(12,4))
 
-    plt.xlabel('Epochs')
-    # naming the y axis
-    plt.ylabel('Loss')
-    # giving a title to my graph
-    plt.title('Train/Val Loss Curve')
+    ax[0].set_title("Avg loss per sample")
+    ax[1].set_title("Avg accuracy per sample")
 
-    # show a legend on the plot
-    plt.legend()
-    plt.savefig(path)
+    if label_axes:
+        ax[0].set_ylabel('Loss (Cross Entropy)')
+        ax[0].set_xlabel('Epoch')
+        ax[1].set_ylabel('Accuracy')
+        ax[1].set_xlabel('Epoch')
+
+    ax[0].plot(loss_trn, label="training")
+    ax[0].plot(loss_val, label="validation")
+    ax[1].plot(acc_trn, label="training")
+    ax[1].plot(acc_val, label="validation")
+    ax[0].legend()
+    ax[1].legend()
+
+    fig.set_figheight(3)
+    fig.set_figwidth(8)
+    plt.show()
+    plt.legend(loc="upper left")
+    if path is not None: plt.savefig(path)
+    plt.clf()
+
 
 
 ''' Time stamp and model saving '''
@@ -125,6 +137,7 @@ def get_time():
 
 def save_model(model, remark=""):
     torch.save(model.state_dict(), f'./trained_model/{remark}.pt')
+    #torch.save(model.state_dict(), f'./trained_model/{remark}_{get_time()}.pt')
 
 def load_model(model, path=""):
     model.load_state_dict(torch.load(path))
